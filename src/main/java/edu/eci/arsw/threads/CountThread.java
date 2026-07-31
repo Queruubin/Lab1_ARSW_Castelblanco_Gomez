@@ -35,12 +35,13 @@ public class CountThread extends Thread {
 
     }
 
+
     /**
      * Runs the 3 threads that prints the elements given a range into 3 subranges.  
      */
     public static void main(String[] args) {
         int a = 1;
-        int b = 10;
+        int b = 1000;
 
     
     CountThread thread1 = new CountThread("Thread1",a,b/3);
