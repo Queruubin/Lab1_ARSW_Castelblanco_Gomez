@@ -3,24 +3,26 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package edu.eci.arsw.threads;
+package edu.eci.arsw.threads.punto1;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
  *
  * @author samulito
  */
-public class CountThread extends Thread{
+public class CountThread1 extends Thread{
     private int inicio;
     private int fin;
     private String nombreHilo;
     private List<Integer> arr;
 
-    public CountThread(String nombreHilo, int inicio, int fin) {
+    public CountThread1(String nombreHilo, int inicio, int fin) {
         this.nombreHilo = nombreHilo;
         this.inicio = inicio;
         this.fin = fin;
+        this.arr = new ArrayList<>();
     }
 
     public List<Integer> devolverArr() {
