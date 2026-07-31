@@ -59,7 +59,6 @@ public class CountThread extends Thread {
     thread3.printingRange((b*2/3)+1,b);
     thread3.start();
     
-
     }
     
 

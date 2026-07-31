@@ -4,7 +4,7 @@
 ## Ejercicio Introducción al paralelismo - Hilos - Caso BlackListSearch
 
 ### Samuel Castelblanco Tellez
-### Angela Gomez Valencia
+### Ángela Gómez Valencia
 
 
 ### Dependencias:
@@ -19,11 +19,25 @@
 **Parte I - Introducción a Hilos en Java**
 
 1. De acuerdo con lo revisado en las lecturas, complete las clases CountThread, para que las mismas definan el ciclo de vida de un hilo que imprima por pantalla los números entre A y B.
+
+Para esta parte, los integrantes escribieron la clase de CountThread teniendo en cuenta la función start(), la cual fue necesaria para que los 3 threads comenzaran a trabajar con la impresión de los números en el rango dado. A continuación se muestran los resultados: 
+
+![Resultados de impresión sección 1.1](/img/results1.1.png)
+
+En adición, se utilizó una lógica básica matemática para hacer la división correcta del rango dado en 3 subrangos, independientemente de si el rango es un múltiplo de 3 o no. 
+
+![Lógica utilizada para las 3 subdivisiones del rango](/img/main.1.1.png)
+
+
 2. Complete el método __main__ de la clase CountMainThreads para que:
 	1. Cree 3 hilos de tipo CountThread, asignándole al primero el intervalo [0..99], al segundo [99..199], y al tercero [200..299].
 	2. Inicie los tres hilos con 'start()'.
 	3. Ejecute y revise la salida por pantalla. 
 	4. Cambie el incio con 'start()' por 'run()'. Cómo cambia la salida?, por qué?.
+
+
+
+
 
 **Parte II - Ejercicio Black List Search**
 
