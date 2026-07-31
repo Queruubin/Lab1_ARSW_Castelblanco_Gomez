@@ -3,6 +3,9 @@
 ### Arquitecturas de Software - ARSW
 ## Ejercicio Introducción al paralelismo - Hilos - Caso BlackListSearch
 
+### Samuel Castelblanco Tellez
+### Angela Gomez Valencia
+
 
 ### Dependencias:
 ####   Lecturas:
