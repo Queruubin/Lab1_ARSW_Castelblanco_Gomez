@@ -4,7 +4,7 @@
 ## Ejercicio Introducción al paralelismo - Hilos - Caso BlackListSearch
 
 ### Samuel Castelblanco Tellez
-### Angela Gomez Valencia
+### Ángela Gómez Valencia
 
 
 ### Dependencias:
@@ -19,11 +19,23 @@
 **Parte I - Introducción a Hilos en Java**
 
 1. De acuerdo con lo revisado en las lecturas, complete las clases CountThread, para que las mismas definan el ciclo de vida de un hilo que imprima por pantalla los números entre A y B.
+
+Para esta parte, los integrantes escribieron la clase de CountThread teniendo en cuenta la función start(), la cual fue necesaria para que los 3 threads comenzaran a trabajar con la impresión de los números en el rango dado. A continuación se muestran los resultados: 
+
+![Resultados de impresión sección 1.1](/img/results1.1.png)
+
+En adición, se utilizó una lógica básica matemática para hacer la división correcta del rango dado en 3 subrangos, independientemente de si el rango es un múltiplo de 3 o no. 
+
+![Lógica utilizada para las 3 subdivisiones del rango](/img/main.1.1.png)
+
+
 2. Complete el método __main__ de la clase CountMainThreads para que:
 	1. Cree 3 hilos de tipo CountThread, asignándole al primero el intervalo [0..99], al segundo [99..199], y al tercero [200..299].
 	2. Inicie los tres hilos con 'start()'.
 	3. Ejecute y revise la salida por pantalla. 
 	4. Cambie el incio con 'start()' por 'run()'. Cómo cambia la salida?, por qué?.
+
+Al usar el run(), el programa corre en orden, es decir, es posible evidenciar los números en orden. Por otro lado, en el start() se presentan los números de forma desordenada, en donde se evidencia como se intercalan los números en cada uno de los threads. Crea un nuevo hilo que se encarga se ir imprimiendo los números que tiene pendiente. Por esa razón, en el run() 
 
 **Parte II - Ejercicio Black List Search**
 
@@ -84,9 +96,13 @@ Con lo anterior, y con los tiempos de ejecución dados, haga una gráfica de tie
 
 	![](img/ahmdahls.png), donde _S(n)_ es el mejoramiento teórico del desempeño, _P_ la fracción paralelizable del algoritmo, y _n_ el número de hilos, a mayor _n_, mayor debería ser dicha mejora. Por qué el mejor desempeño no se logra con los 500 hilos?, cómo se compara este desempeño cuando se usan 200?. 
 
+
+Teniendo en cuenta la 
+
+
+
 2. Cómo se comporta la solución usando tantos hilos de procesamiento como núcleos comparado con el resultado de usar el doble de éste?.
 
 3. De acuerdo con lo anterior, si para este problema en lugar de 100 hilos en una sola CPU se pudiera usar 1 hilo en cada una de 100 máquinas hipotéticas, la ley de Amdahls se aplicaría mejor?. Si en lugar de esto se usaran c hilos en 100/c máquinas distribuidas (siendo c es el número de núcleos de dichas máquinas), se mejoraría?. Explique su respuesta.
-
 
 
