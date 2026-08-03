@@ -90,19 +90,101 @@ Al iniciar el programa ejecute el monitor jVisualVM, y a medida que corran las p
 
 Con lo anterior, y con los tiempos de ejecución dados, haga una gráfica de tiempo de solución vs. número de hilos. Analice y plantee hipótesis con su compañero para las siguientes preguntas (puede tener en cuenta lo reportado por jVisualVM):
 
-**Parte IV - Ejercicio Black List Search**
 
-1. Según la [ley de Amdahls](https://www.pugetsystems.com/labs/articles/Estimating-CPU-Performance-using-Amdahls-Law-619/#WhatisAmdahlsLaw?):
+---
+## RESPUESTAS A PREGUNTAS DE DISCUSIÓN
 
-	![](img/ahmdahls.png), donde _S(n)_ es el mejoramiento teórico del desempeño, _P_ la fracción paralelizable del algoritmo, y _n_ el número de hilos, a mayor _n_, mayor debería ser dicha mejora. Por qué el mejor desempeño no se logra con los 500 hilos?, cómo se compara este desempeño cuando se usan 200?. 
+### Parte II.I — Terminación temprana
 
+> ¿Cómo se podría modificar la implementación para minimizar el número de consultas cuando los N hilos ya hayan encontrado el número mínimo de ocurrencias requeridas? ¿Qué elemento nuevo traería esto al problema?
 
-Teniendo en cuenta la 
+**Respuesta:** Se puede implementar un mecanismo de **cancelación cooperativa** usando una variable atómica compartida (por ejemplo `AtomicBoolean` o `volatile boolean`) que actúe como "bandera de parada". Cada hilo, antes de consultar la siguiente lista negra, verifica esta bandera. Cuando un hilo detecta que el contador global de ocurrencias —protegido con `synchronized` o usando `AtomicInteger`— ya alcanzó `BLACK_LIST_ALARM_COUNT`, establece la bandera a `true` y todos los hilos terminan su búsqueda anticipadamente.
 
+El **nuevo elemento** que esto introduce es la **necesidad de sincronización entre hilos** (coordinación de escritura/lectura de variables compartidas), lo cual:
+- Agrega un costo de contención (`synchronized` / `AtomicInteger`).
+- Introduce un *trade-off*: menos consultas a listas negras vs. overhead de sincronización.
+- Hace que el speedup dependa de qué tan dispersas están las ocurrencias. Si todas están al final, la bandera nunca se activa temprano y no hay ganancia.
 
+---
 
-2. Cómo se comporta la solución usando tantos hilos de procesamiento como núcleos comparado con el resultado de usar el doble de éste?.
+### Parte IV — Ley de Amdahl y desempeño
 
-3. De acuerdo con lo anterior, si para este problema en lugar de 100 hilos en una sola CPU se pudiera usar 1 hilo en cada una de 100 máquinas hipotéticas, la ley de Amdahls se aplicaría mejor?. Si en lugar de esto se usaran c hilos en 100/c máquinas distribuidas (siendo c es el número de núcleos de dichas máquinas), se mejoraría?. Explique su respuesta.
+**1. ¿Por qué el mejor desempeño no se logra con 500 hilos? ¿Cómo se compara con 200?**
 
+La ley de Amdahl establece que el speedup _S(n)_ está limitado por la fracción secuencial del algoritmo: por más hilos que se agreguen, nunca se supera ese límite teórico. En la práctica, al aumentar excesivamente los hilos aparecen factores que degradan el desempeño:
+
+- **Overhead de creación y destrucción**: 500 hilos implican asignar stacks individuales (~1 MB cada uno en JVM), sumando ~500 MB solo en stacks, más el tiempo de inicialización.
+- **Context switching**: con 500 hilos para ~80,000 listas, cada hilo procesa apenas ~160 listas. El SO invierte más tiempo alternando entre hilos que ejecutando trabajo útil.
+- **Contención de recursos**: más hilos compiten por caché L1/L2/L3, provocando _cache thrashing_.
+- **Rendimientos decrecientes**: llega un punto donde agregar hilos **empeora** el tiempo (pendiente positiva en la curva).
+
+**Sin embargo, nuestros resultados muestran una excepción a esta regla:** en este experimento, el speedup siguió mejorando hasta 100 hilos (109.67×). Esto NO contradice a Amdahl, sino que revela que el problema no es puramente CPU-bound. La fachada `HostBlacklistsDataSourceFacade` internamente **simula latencia** en cada consulta (`isInBlackListServer`), lo que hace que los hilos pasen tiempo esperando —comportamiento típico de un problema I/O-bound—. En ese escenario, más hilos permiten que mientras unos esperan, otros ejecuten, y el speedup puede superar ampliamente el número de núcleos.
+
+Con 200 hilos probablemente se vería una mejora menor que la observada de 50 a 100 (el speedup marginal se reduce). Con 500 hilos el overhead de creación y context switching comenzaría a dominar, y el tiempo **empeoraría** respecto a 100-200 hilos.
+
+**2. ¿Cómo se comporta usar tantos hilos como núcleos vs. el doble de núcleos?**
+
+En nuestro experimento (8 núcleos):
+
+| Configuración | Tiempo (ms) | Speedup |
+|--------------|------------|---------|
+| 8 hilos (N)   | 14,333     | 8.93×   |
+| 16 hilos (2N) | 7,610      | 16.82×  |
+
+El doble de núcleos **redujo el tiempo casi a la mitad** (speedup ~2× adicional). Esto es **atípico** para un problema CPU-bound puro y confirma que la latencia simulada por la fachada permite que los 16 hilos aprovechen los tiempos de espera. Si el problema fuera cómputo puro, 16 hilos en 8 núcleos daría un speedup similar a 8 hilos (porque no hay más núcleos que usar).
+
+La conclusión es que **el speedup depende del perfil real del problema**: en escenarios con latencia (I/O, red, sleep simulado), duplicar los hilos puede dar ganancias significativas incluso sin duplicar los núcleos físicos.
+
+**3. ¿Se aplicaría mejor la ley de Amdahl con 100 máquinas de 1 hilo cada una? ¿Y con c hilos en 100/c máquinas?**
+
+**100 máquinas × 1 hilo**: Sí, la ley de Amdahl se aplicaría **mucho mejor** porque:
+- Cada máquina tiene su propia CPU, memoria y caché — **no hay contención de recursos compartidos**.
+- No existe el overhead de context switching entre hilos de una misma máquina.
+- El speedup sería cercano al ideal teórico, limitado solo por la fracción secuencial P y la latencia de red para distribuir/consolidar resultados.
+- La porción paralelizable del algoritmo (consultar listas negras) es cercana al 100%, por lo que el speedup teórico con 100 máquinas se aproximaría a 100×.
+
+**c hilos en 100/c máquinas distribuidas**: También mejoraría significativamente respecto a una sola máquina. Las ventajas:
+- Se elimina la contención de CPU y caché entre máquinas (cada máquina maneja sus propios c hilos).
+- La comunicación entre hilos de una misma máquina no compite con hilos de otras máquinas.
+- La única desventaja nueva es la **latencia de red** para distribuir el trabajo y consolidar resultados, lo cual es un factor secuencial adicional que Amdahl no modela directamente pero que en la práctica es pequeño comparado con la ganancia de eliminar el context switching masivo.
+
+En resumen: la versión distribuida escala mejor que muchos hilos en una sola máquina porque elimina el cuello de botella del _context switching_ y la contención de recursos compartidos, a cambio de una latencia de red que suele ser marginal frente al beneficio.
+
+---
+## RESULTADOS PARTE III — Evaluación de Desempeño
+
+**Máquina:** 8 núcleos | **IP de prueba:** `202.24.34.55` (dispersa, encontrada en 5 listas negras)
+
+### Estado inicial (antes de ejecutar)
+
+![Estado inicial jVisualVM](img/parte3/0-inicio.png)
+
+| Métrica | Valor |
+|---------|-------|
+| Threads activos | 14 |
+| CPU | En reposo |
+| Heap | ~26 MB (base) |
+
+### Tabla de resultados por configuración
+
+| # | Hilos | Tiempo (ms) | Speedup vs 1 hilo | CPU pico (%) | Heap usado | Threads totales | Captura jVisualVM |
+|---|-------|------------|-------------------|-------------|------------|-----------------|-------------------|
+| 1 | 1     | 128,039.81 | 1.00×             | 4.3%        | 26 MB      | 15              | ![1 hilo](img/parte3/1-hilo.png) |
+| 2 | 8     | 14,333.37  | 8.93×             | 3.6%        | 34 MB      | 22              | ![8 hilos](img/parte3/8-hilos.png) |
+| 3 | 16    | 7,610.05   | 16.82×            | 8.2%        | 50 MB      | 29              | ![16 hilos](img/parte3/16-hilos.png) |
+| 4 | 50    | 2,686.30   | 47.67×            | 5.9%        | 86 MB      | 63              | ![50 hilos](img/parte3/50-hilos.png) |
+| 5 | 100   | 1,167.46   | 109.67×           | 6.0%        | 135 MB     | 115             | ![100 hilos](img/parte3/100-hilos.png) |
+
+### Observaciones
+
+- **Speedup casi lineal** hasta 16 hilos (2× núcleos), lo cual es excepcional y sugiere que el problema está más limitado por I/O que por CPU. La fachada `HostBlacklistsDataSourceFacade` internamente simula latencia de consulta, lo que permite que más hilos aprovechen el tiempo de espera.
+- **CPU nunca llegó al 100%** (máximo 8.2%), confirmando que el cuello de botella no es cómputo puro sino el mecanismo interno de la fachada.
+- **Memoria heap crece linealmente** con el número de hilos (cada hilo crea su propia `LinkedList` de resultados), pero se mantiene en rangos manejables (< 200 MB).
+- **Threads totales** = hilos de prueba + hilos de JVM (GC, monitoreo, etc.). La diferencia es consistente (~13-15 hilos base).
+
+### Gráfica
+
+![alt text](image-1.png)
+
+Con estos datos se debe construir una gráfica **Tiempo de ejecución vs. Número de hilos**. La curva resultante muestra un descenso pronunciado al inicio que se va aplanando — comportamiento típico de la Ley de Amdahl.
 
