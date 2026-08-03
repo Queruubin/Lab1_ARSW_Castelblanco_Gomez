@@ -218,7 +218,8 @@ Y lo más importante: la ganancia real depende de qué tan repartidas estén las
 
 Con estos datos se debe construir una gráfica **Tiempo de ejecución vs. Número de hilos**. La curva resultante muestra un descenso pronunciado al inicio que se va aplanando — comportamiento típico de la Ley de Amdahl.
 
-![alt text](image-1.png)
+
+![Execution time as a function of # of threads](/img/parte3/graph-results-3.png)
 
 
 ---
