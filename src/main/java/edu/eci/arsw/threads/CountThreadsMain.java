@@ -3,66 +3,104 @@ package edu.eci.arsw.threads;
 import java.util.ArrayList;
 import java.util.List;
 
-import edu.eci.arsw.threads.punto1.CountThread1;
-
 /**
- * Main class for Part I - Threads introduction.
- * 
- * Demonstrates two approaches:
- *   Section 1 — Without JOIN (partner's code using CountThread).
- *   Section 2 — With JOIN (using CountThread1), collecting results after all threads finish.
- * 
- * @authors Samuel Castelblanco, Ángela Gómez
+ *
+ * Demonstrates the effect of join():
+ *   Section 1 - WITHOUT join(): results are read before threads are
+ *               guaranteed to finish, so the collected data can be
+ *               incomplete or inconsistent between runs.
+ *   Section 2 - WITH join(): the main thread waits for every worker
+ *               thread to finish, guaranteeing complete, consistent results.
+ *
+ * @author Samuel Castelblanco, Ángela Gómez
  */
 public class CountThreadsMain {
 
-    public static void main(String a[]) throws InterruptedException {
+    public static void main(String[] args) throws InterruptedException {
+
+        int rangeStart = 0;
+        int rangeEnd = 1000;
+        int numberOfThreads = 3;
 
         System.out.println("============================================");
-        System.out.println("  SECCIÓN 1 — Sin JOIN (CountThread)");
-        System.out.println("  Los hilos arrancan pero no se espera a que terminen.");
-        System.out.println("  El run() no está sobreescrito, así que la impresión");
-        System.out.println("  ocurre secuencialmente en el hilo principal.");
+        System.out.println("  SECTION 1 - WITHOUT join()");
+        System.out.println("  Threads are started, but the main thread does NOT wait for them.");
+        System.out.println("  Results are read immediately, before completion is guaranteed.");
         System.out.println("============================================\n");
 
-        CountThread.main(null);
+        List<Integer> resultWithoutJoin = runThreadsWithoutJoin(rangeStart, rangeEnd, numberOfThreads);
 
-        System.out.println("\n============================================");
-        System.out.println("  SECCIÓN 2 — Con JOIN (CountThread1)");
-        System.out.println("  Cada hilo guarda resultados en una lista.");
-        System.out.println("  join() garantiza recogerlos todos al final.");
+        System.out.println("Total numbers collected: " + resultWithoutJoin.size());
+        System.out.println("Expected total if every thread had finished: " + (rangeEnd - rangeStart + 1));
+        System.out.println("This count is unreliable: it can vary between runs, and may even match the expected");
+
+        System.out.println("============================================");
+        System.out.println("  SECTION 2 - WITH join()");
+        System.out.println("  join() guarantees the results are collected correctly and consistently.");
         System.out.println("============================================\n");
 
-        int A = 0;
-        int B = 1000;
-        int numeroHilos = 3;
+        List<Integer> resultWithJoin = runThreadsWithJoin(rangeStart, rangeEnd, numberOfThreads);
 
-        CountThread1[] hilos = new CountThread1[numeroHilos];
-        int cantidad = B - A + 1;
-        int tamanoParte = cantidad / numeroHilos;
-        int inicio = A;
+        System.out.println("Total numbers collected: " + resultWithJoin.size());
+        System.out.println("First 10: " + resultWithJoin.subList(0, Math.min(10, resultWithJoin.size())));
+        System.out.println("Last 10:  " + resultWithJoin.subList(Math.max(0, resultWithJoin.size() - 10), resultWithJoin.size()));
+    }
 
-        // Crear y lanzar los N hilos
-        for (int i = 0; i < numeroHilos; i++) {
-            int fin = (i == numeroHilos - 1) ? B : inicio + tamanoParte - 1;
-            hilos[i] = new CountThread1("Hilo-" + i, inicio, fin + 1);
-            hilos[i].start();
-            inicio = fin + 1;
+    /**
+     * Starts N threads but does NOT wait for them to finish before
+     * reading their results. This can produce incomplete or
+     * inconsistent data.
+     */
+    private static List<Integer> runThreadsWithoutJoin(int rangeStart, int rangeEnd, int numberOfThreads) {
+        CountThread1[] threads = createThreads(rangeStart, rangeEnd, numberOfThreads);
+
+        for (CountThread1 thread : threads) {
+            thread.start();
         }
 
-        // Esperar a que todos terminen (JOIN)
-        for (CountThread1 hilo : hilos) {
-            hilo.join();
+        // No join() here: results are read right away, without waiting.
+        List<Integer> result = new ArrayList<>();
+        for (CountThread1 thread : threads) {
+            result.addAll(thread.getNumbers());
+        }
+        return result;
+    }
+
+    /**
+     * Starts N threads and waits for all of them to finish using
+     * join() before reading their results. This guarantees the final
+     * list is always complete and consistent.
+     */
+    private static List<Integer> runThreadsWithJoin(int rangeStart, int rangeEnd, int numberOfThreads) throws InterruptedException {
+        CountThread1[] threads = createThreads(rangeStart, rangeEnd, numberOfThreads);
+
+        for (CountThread1 thread : threads) {
+            thread.start();
         }
 
-        // Consolidar resultados
-        List<Integer> resultado = new ArrayList<>();
-        for (CountThread1 hilo : hilos) {
-            resultado.addAll(hilo.devolverArr());
+        // join() blocks the main thread until each worker thread finishes.
+        for (CountThread1 thread : threads) {
+            thread.join();
         }
 
-        System.out.println("Total de números recolectados: " + resultado.size());
-        System.out.println("Primeros 10: " + resultado.subList(0, Math.min(10, resultado.size())));
-        System.out.println("Últimos 10:  " + resultado.subList(Math.max(0, resultado.size() - 10), resultado.size()));
+        List<Integer> result = new ArrayList<>();
+        for (CountThread1 thread : threads) {
+            result.addAll(thread.getNumbers());
+        }
+        return result;
+    }
+
+    private static CountThread1[] createThreads(int rangeStart, int rangeEnd, int numberOfThreads) {
+        CountThread1[] threads = new CountThread1[numberOfThreads];
+        int totalCount = rangeEnd - rangeStart + 1;
+        int chunkSize = totalCount / numberOfThreads;
+        int start = rangeStart;
+
+        for (int i = 0; i < numberOfThreads; i++) {
+            int end = (i == numberOfThreads - 1) ? rangeEnd : start + chunkSize - 1;
+            threads[i] = new CountThread1("Thread-" + i, start, end + 1);
+            start = end + 1;
+        }
+        return threads;
     }
 }

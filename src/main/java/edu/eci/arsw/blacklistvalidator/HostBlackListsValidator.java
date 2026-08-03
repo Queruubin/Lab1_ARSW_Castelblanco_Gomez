@@ -30,7 +30,7 @@ public class HostBlackListsValidator {
         
         int totalServers = skds.getRegisteredServersCount();
         
-        // Calcular el tamaño de cada segmento y el residuo (para manejar N par o impar)
+        // Managing the segment size, depending if the N value is even or odd. 
         int segmentSize = totalServers / N;
         int remainder = totalServers % N;
         
@@ -38,10 +38,10 @@ public class HostBlackListsValidator {
         
         int startRange = 0;
         
-        // Crear y lanzar los hilos distribuyendo el espacio de búsqueda
+        // Creating threads depending on the searching space 
         for (int i = 0; i < N; i++) {
             int endRange = startRange + segmentSize;
-            // Si es el último hilo, le sumamos el residuo para cubrir la totalidad de los servidores
+            //  If its the last thread, we add the residue in order to cover up all the services 
             if (i == N - 1) {
                 endRange += remainder;
             }
@@ -52,7 +52,7 @@ public class HostBlackListsValidator {
             startRange = endRange;
         }
         
-        // Esperar a que todos los hilos terminen su ejecución (join)
+        // EWaits until all threads finish their execution 
         for (int i = 0; i < N; i++) {
             try {
                 threads[i].join();
@@ -64,14 +64,14 @@ public class HostBlackListsValidator {
         int totalOccurrences = 0;
         int checkedListsCount = 0;
         
-        // Consolidar resultados de todos los hilos
+        // Reunite the thread results 
         for (int i = 0; i < N; i++) {
             totalOccurrences += threads[i].getOccurrencesCount();
             checkedListsCount += threads[i].getCheckedListsCount();
             blackListOccurrences.addAll(threads[i].getBlackListOccurrences());
         }
         
-        // Reportar según el umbral de alarma
+        // Report within the warning threshold 
         if (totalOccurrences >= BLACK_LIST_ALARM_COUNT) {
             skds.reportAsNotTrustworthy(ipaddress);
         } else {

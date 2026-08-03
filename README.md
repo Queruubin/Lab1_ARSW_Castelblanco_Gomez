@@ -3,8 +3,9 @@
 ### Arquitecturas de Software - ARSW
 ## Ejercicio Introducción al paralelismo - Hilos - Caso BlackListSearch
 
-### Samuel Castelblanco Tellez
-### Ángela Gómez Valencia
+### Autores: 
+- Samuel Castelblanco Tellez
+- Ángela Sofía Gómez Valencia
 
 
 ### Dependencias:
@@ -14,20 +15,10 @@
 
 ### Descripción
   Este ejercicio contiene una introducción a la programación con hilos en Java, además de la aplicación a un caso concreto.
-  
 
 **Parte I - Introducción a Hilos en Java**
 
 1. De acuerdo con lo revisado en las lecturas, complete las clases CountThread, para que las mismas definan el ciclo de vida de un hilo que imprima por pantalla los números entre A y B.
-
-Para esta parte, los integrantes escribieron la clase de CountThread teniendo en cuenta la función start(), la cual fue necesaria para que los 3 threads comenzaran a trabajar con la impresión de los números en el rango dado. A continuación se muestran los resultados: 
-
-![Resultados de impresión sección 1.1](/img/results1.1.png)
-
-En adición, se utilizó una lógica básica matemática para hacer la división correcta del rango dado en 3 subrangos, independientemente de si el rango es un múltiplo de 3 o no. 
-
-![Lógica utilizada para las 3 subdivisiones del rango](/img/main.1.1.png)
-
 
 2. Complete el método __main__ de la clase CountMainThreads para que:
 	1. Cree 3 hilos de tipo CountThread, asignándole al primero el intervalo [0..99], al segundo [99..199], y al tercero [200..299].
@@ -35,7 +26,6 @@ En adición, se utilizó una lógica básica matemática para hacer la división
 	3. Ejecute y revise la salida por pantalla. 
 	4. Cambie el incio con 'start()' por 'run()'. Cómo cambia la salida?, por qué?.
 
-Al usar el run(), el programa corre en orden, es decir, es posible evidenciar los números en orden. Por otro lado, en el start() se presentan los números de forma desordenada, en donde se evidencia como se intercalan los números en cada uno de los threads. Crea un nuevo hilo que se encarga se ir imprimiendo los números que tiene pendiente. Por esa razón, en el run() 
 
 **Parte II - Ejercicio Black List Search**
 
@@ -90,68 +80,108 @@ Al iniciar el programa ejecute el monitor jVisualVM, y a medida que corran las p
 
 Con lo anterior, y con los tiempos de ejecución dados, haga una gráfica de tiempo de solución vs. número de hilos. Analice y plantee hipótesis con su compañero para las siguientes preguntas (puede tener en cuenta lo reportado por jVisualVM):
 
+Parte IV - Ejercicio Black List Search
+
+1. Según la ley de Amdahls:
+
+![](/img/ahmdahls.png), donde S(n) es el mejoramiento teórico del desempeño, P la fracción paralelizable del algoritmo, y n el número de hilos, a mayor n, mayor debería ser dicha mejora. Por qué el mejor desempeño no se logra con los 500 hilos?, cómo se compara este desempeño cuando se usan 200?.
+
+2. Cómo se comporta la solución usando tantos hilos de procesamiento como núcleos comparado con el resultado de usar el doble de éste?.
+
+3. De acuerdo con lo anterior, si para este problema en lugar de 100 hilos en una sola CPU se pudiera usar 1 hilo en cada una de 100 máquinas hipotéticas, la ley de Amdahls se aplicaría mejor?. Si en lugar de esto se usaran c hilos en 100/c máquinas distribuidas (siendo c es el número de núcleos de dichas máquinas), se mejoraría?. Explique su respuesta.
+
 
 ---
-## RESPUESTAS A PREGUNTAS DE DISCUSIÓN
+## RESPUESTAS LABORATORIO I 
 
-### Parte II.I — Terminación temprana
+### Parte I - Introducción a los hilos en Java 
 
-> ¿Cómo se podría modificar la implementación para minimizar el número de consultas cuando los N hilos ya hayan encontrado el número mínimo de ocurrencias requeridas? ¿Qué elemento nuevo traería esto al problema?
+> 1. De acuerdo con lo revisado en las lecturas, complete las clases CountThread, para que las mismas definan el ciclo de vida de un hilo que imprima por pantalla los números entre A y B. 
 
-**Respuesta:** Se puede implementar un mecanismo de **cancelación cooperativa** usando una variable atómica compartida (por ejemplo `AtomicBoolean` o `volatile boolean`) que actúe como "bandera de parada". Cada hilo, antes de consultar la siguiente lista negra, verifica esta bandera. Cuando un hilo detecta que el contador global de ocurrencias —protegido con `synchronized` o usando `AtomicInteger`— ya alcanzó `BLACK_LIST_ALARM_COUNT`, establece la bandera a `true` y todos los hilos terminan su búsqueda anticipadamente.
+Para esta parte, los integrantes escribieron la clase de CountThread teniendo en cuenta la funciones de start() y run(), las cuales fueron usadas para entender mejor los conceptos de concurrencia. En adición, se utilizó una lógica básica matemática para hacer la división correcta del rango dado en 3 subrangos, independientemente de si el rango es un múltiplo de 3 o no. 
 
-El **nuevo elemento** que esto introduce es la **necesidad de sincronización entre hilos** (coordinación de escritura/lectura de variables compartidas), lo cual:
-- Agrega un costo de contención (`synchronized` / `AtomicInteger`).
-- Introduce un *trade-off*: menos consultas a listas negras vs. overhead de sincronización.
-- Hace que el speedup dependa de qué tan dispersas están las ocurrencias. Si todas están al final, la bandera nunca se activa temprano y no hay ganancia.
 
----
+Ahora bien, para poder identificar el orden de la impresión de los diferentes hilos el programa imprime el nombre del hilo con cada número, como se mostró anteriormente. Acá se muestra la lógica del uso de los métodos run() y start(), los cuales son llamados desde el método main. 
 
-### Parte IV — Ley de Amdahl y desempeño
+![Main method 1](/img/main1.png)
 
-**1. ¿Por qué el mejor desempeño no se logra con 500 hilos? ¿Cómo se compara con 200?**
 
-La ley de Amdahl establece que el speedup _S(n)_ está limitado por la fracción secuencial del algoritmo: por más hilos que se agreguen, nunca se supera ese límite teórico. En la práctica, al aumentar excesivamente los hilos aparecen factores que degradan el desempeño:
+Método run() imprime de forma ordenada los números: 
 
-- **Overhead de creación y destrucción**: 500 hilos implican asignar stacks individuales (~1 MB cada uno en JVM), sumando ~500 MB solo en stacks, más el tiempo de inicialización.
-- **Context switching**: con 500 hilos para ~80,000 listas, cada hilo procesa apenas ~160 listas. El SO invierte más tiempo alternando entre hilos que ejecutando trabajo útil.
-- **Contención de recursos**: más hilos compiten por caché L1/L2/L3, provocando _cache thrashing_.
-- **Rendimientos decrecientes**: llega un punto donde agregar hilos **empeora** el tiempo (pendiente positiva en la curva).
+![Results using run()](/img/results-run-1.1.png)
 
-**Sin embargo, nuestros resultados muestran una excepción a esta regla:** en este experimento, el speedup siguió mejorando hasta 100 hilos (109.67×). Esto NO contradice a Amdahl, sino que revela que el problema no es puramente CPU-bound. La fachada `HostBlacklistsDataSourceFacade` internamente **simula latencia** en cada consulta (`isInBlackListServer`), lo que hace que los hilos pasen tiempo esperando —comportamiento típico de un problema I/O-bound—. En ese escenario, más hilos permiten que mientras unos esperan, otros ejecuten, y el speedup puede superar ampliamente el número de núcleos.
 
-Con 200 hilos probablemente se vería una mejora menor que la observada de 50 a 100 (el speedup marginal se reduce). Con 500 hilos el overhead de creación y context switching comenzaría a dominar, y el tiempo **empeoraría** respecto a 100-200 hilos.
+Método start() imprime de forma desordenada los números: 
 
-**2. ¿Cómo se comporta usar tantos hilos como núcleos vs. el doble de núcleos?**
 
-En nuestro experimento (8 núcleos):
+![Results using start()](/img/results-start-1.1.png)
 
-| Configuración | Tiempo (ms) | Speedup |
-|--------------|------------|---------|
-| 8 hilos (N)   | 14,333     | 8.93×   |
-| 16 hilos (2N) | 7,610      | 16.82×  |
 
-El doble de núcleos **redujo el tiempo casi a la mitad** (speedup ~2× adicional). Esto es **atípico** para un problema CPU-bound puro y confirma que la latencia simulada por la fachada permite que los 16 hilos aprovechen los tiempos de espera. Si el problema fuera cómputo puro, 16 hilos en 8 núcleos daría un speedup similar a 8 hilos (porque no hay más núcleos que usar).
+> 2. Complete el método __main__ de la clase CountMainThreads para que:
+	1. Cree 3 hilos de tipo CountThread, asignándole al primero el intervalo [0..99], al segundo [99..199], y al tercero [200..299].
+	2. Inicie los tres hilos con 'start()'.
+	3. Ejecute y revise la salida por pantalla. 
+	4. Cambie el incio con 'start()' por 'run()'. Cómo cambia la salida?, por qué?.
 
-La conclusión es que **el speedup depende del perfil real del problema**: en escenarios con latencia (I/O, red, sleep simulado), duplicar los hilos puede dar ganancias significativas incluso sin duplicar los núcleos físicos.
+Ahora bien, para poder entender mejor el método de join junto con los métodos previamente utilizados de start() y run(), se utilizó la clase de CountThread1 que contiene los elementos básicos de un thread junto con sus elementos a imprimir, la cual fue usada en la clase de CountThreadsMain. Esta busca comparar los resultados cuando se usa y cuando no se usa la función de join.
 
-**3. ¿Se aplicaría mejor la ley de Amdahl con 100 máquinas de 1 hilo cada una? ¿Y con c hilos en 100/c máquinas?**
+![Results with and without using join()](/img/join-1.2.png)
 
-**100 máquinas × 1 hilo**: Sí, la ley de Amdahl se aplicaría **mucho mejor** porque:
-- Cada máquina tiene su propia CPU, memoria y caché — **no hay contención de recursos compartidos**.
-- No existe el overhead de context switching entre hilos de una misma máquina.
-- El speedup sería cercano al ideal teórico, limitado solo por la fracción secuencial P y la latencia de red para distribuir/consolidar resultados.
-- La porción paralelizable del algoritmo (consultar listas negras) es cercana al 100%, por lo que el speedup teórico con 100 máquinas se aproximaría a 100×.
+A continuación se muestran los resultados de ambos casos: 
 
-**c hilos en 100/c máquinas distribuidas**: También mejoraría significativamente respecto a una sola máquina. Las ventajas:
-- Se elimina la contención de CPU y caché entre máquinas (cada máquina maneja sus propios c hilos).
-- La comunicación entre hilos de una misma máquina no compite con hilos de otras máquinas.
-- La única desventaja nueva es la **latencia de red** para distribuir el trabajo y consolidar resultados, lo cual es un factor secuencial adicional que Amdahl no modela directamente pero que en la práctica es pequeño comparado con la ganancia de eliminar el context switching masivo.
+![join() results](/img/join-results-1.2.png)
 
-En resumen: la versión distribuida escala mejor que muchos hilos en una sola máquina porque elimina el cuello de botella del _context switching_ y la contención de recursos compartidos, a cambio de una latencia de red que suele ser marginal frente al beneficio.
 
----
-## RESULTADOS PARTE III — Evaluación de Desempeño
+### Parte II - Ejercicio Black List Search
+
+> 1. Cree una clase de tipo Thread que represente el ciclo de vida de un hilo que haga la búsqueda de un segmento del conjunto de servidores disponibles. Agregue a dicha clase un método que permita 'preguntarle' a las instancias del mismo (los hilos) cuantas ocurrencias de servidores maliciosos ha encontrado o encontró.
+
+Para esta parte de creó una clase llamada HostBlackSearchThread, la cual permite monitorear y registrar la cantidad de ocurrencias de servidores maliciosos que ha encontrado. Este registro se realiza dentro del método de run(), el cual es repaldado por flags para obtener la cantidad de ocurrencias y la lista de ocurrencias. 
+
+A continuación se muestra la clase del ciclo de vida de los hilos junto con sus flags: 
+
+![HostBlackListSearchThread logic](/img/hblst-logic.png)
+
+> 2. Agregue al método 'checkHost' un parámetro entero N, correspondiente al número de hilos entre los que se va a realizar la búsqueda (recuerde tener en cuenta si N es par o impar!). Modifique el código de este método para que divida el espacio de búsqueda entre las N partes indicadas, y paralelice la búsqueda a través de N hilos. Haga que dicha función espere hasta que los N hilos terminen de resolver su respectivo sub-problema, agregue las ocurrencias encontradas por cada hilo a la lista que retorna el método, y entonces calcule (sumando el total de ocurrencuas encontradas por cada hilo) si el número de ocurrencias es mayor o igual a _BLACK_LIST_ALARM_COUNT_. Si se da este caso, al final se DEBE reportar el host como confiable o no confiable, y mostrar el listado con los números de las listas negras respectivas. Para lograr este comportamiento de 'espera' revise el método [join](https://docs.oracle.com/javase/tutorial/essential/concurrency/join.html) del API de concurrencia de Java. Tenga también en cuenta:
+
+> * Dentro del método checkHost Se debe mantener el LOG que informa, antes de retornar el resultado, el número de listas negras revisadas VS. el número de listas negras total (línea 60). Se debe garantizar que dicha información sea verídica bajo el nuevo esquema de procesamiento en paralelo planteado.
+
+> * Se sabe que el HOST 202.24.34.55 está reportado en listas negras de una forma más dispersa, y que el host 212.24.24.55 NO está en ninguna lista negra.
+
+
+Para esta parte se tuvo en cuenta el uso de la función join(), utilizada previamente en la sección anterior. Acá se editó el método de checkHost de la clase HostBlackListsValidator para poder manejar los casos en donde el parámetro N sea par o impar. En adición e implementa la lógica de distribuir correctamente los hilos dependiendo del espacio muestral que se quiere analizar, se usa la función join() para poder manejar el orden de ejecución de los hilos, para así finalmente añadir las ocurrencias a la lista correspondiente, y así poder identificar si dicha ocurrencia supera el umbral para claisificarlos como confiable o no confiable
+
+Durante todo este proceso se tiene en cuenta el uso del logger para registrar los datos en cuenta a las listas negras junto con el númer de lista negras en total. 
+
+A continuación se muestran los resultados de dos ejemplos: uno donde la dirección IP es confiable y otra dirección que no es confiable al aparecer en 5 o más listas negras. 
+
+![Results with black lists validator](/img/results-part2.png)
+
+
+### Parte II.I - Terminación temprana
+
+> La estrategia de paralelismo antes implementada es ineficiente en ciertos casos, pues la búsqueda se sigue realizando aún cuando los N hilos (en su conjunto) ya hayan encontrado el número mínimo de ocurrencias requeridas para reportar al servidor como malicioso. ¿Cómo se podría modificar la implementación para minimizar el número de consultas en estos casos?, ¿qué elemento nuevo traería esto al problema?
+
+
+Se podría agregar una bandera compartida entre los hilos, algo como un AtomicBoolean (o un volatile boolean), que funcione como señal de "ya párenle todos". La idea es que cada hilo, antes de ir a consultar la siguiente lista negra, primero mire esa bandera. Si ya está en true, simplemente no sigue buscando.
+
+El que prende dicha bandera es el hilo que note que el contador de ocurrencias (que ya se está llevando de forma segura, con synchronized o con AtomicInteger) llegó al BLACK_LIST_ALARM_COUNT. En ese momento la pone en true, y como todos los demás la están chequeando constantemente, los otros hilos van a ir cortando su búsqueda apenas se den cuenta.
+
+Ahora, esto puede provocar una nueva desventaja: sincronización entre hilos. Este puede generar los siguientes inconvenientes: 
+
+Hay que coordinar quién lee y quién escribe esas variables compartidas, lo que mete contención (o sea, hilos esperándose entre ellos por el acceso).
+Se genera un trade-off: uno se ahorra consultas innecesarias, pero paga con el overhead que meten synchronized o los átomos.
+Y lo más importante: la ganancia real depende de qué tan repartidas estén las ocurrencias en las listas. Si resulta que todas las coincidencias están casi al final, la bandera se prende tarde y prácticamente no se ahorra nada — en el peor caso, es como si no hubiéramos hecho el cambio.
+
+
+## Parte III — Evaluación de Desempeño
+
+> A partir de lo anterior, implemente la siguiente secuencia de experimentos para realizar las validación de direcciones IP dispersas (por ejemplo 202.24.34.55), tomando los tiempos de ejecución de los mismos (asegúrese de hacerlos en la misma máquina):
+> - Un solo hilo.
+> - Tantos hilos como núcleos de procesamiento (haga que el programa determine esto haciendo uso del API Runtime).
+> - 50 hilos.
+> - Tantos hilos como el doble de núcleos de procesamiento.
+> - 100 hilos.
 
 **Máquina:** 8 núcleos | **IP de prueba:** `202.24.34.55` (dispersa, encontrada en 5 listas negras)
 
@@ -184,7 +214,69 @@ En resumen: la versión distribuida escala mejor que muchos hilos en una sola m�
 
 ### Gráfica
 
-![alt text](image-1.png)
+> Con lo anterior, y con los tiempos de ejecución dados, haga una gráfica de tiempo de solución vs. número de hilos. Analice y plantee hipótesis con su compañero para las siguientes preguntas (puede tener en cuenta lo reportado por jVisualVM):
 
 Con estos datos se debe construir una gráfica **Tiempo de ejecución vs. Número de hilos**. La curva resultante muestra un descenso pronunciado al inicio que se va aplanando — comportamiento típico de la Ley de Amdahl.
 
+![alt text](image-1.png)
+
+
+---
+
+# Parte IV — Ley de Amdahl y desempeño
+
+## 1. ¿Por qué el mejor desempeño no se logra con los 500 hilos? ¿Cómo se compara con 200?
+
+La ley de Amdahl dice básicamente que no importa cuántos hilos le metamos, el speedup siempre va a estar topado por la parte del algoritmo que no se puede paralelizar. Ese techo nunca se rompe, sin importar qué tan potente sea la máquina o cuántos hilos lancemos.
+
+Ahora, en la práctica, meter demasiados hilos trae sus propios problemas, y por eso 500 termina siendo contraproducente:
+
+- Crear y destruir 500 hilos no es gratis. Cada uno necesita su propio stack (en la JVM, más o menos 1 MB por hilo), así que solo en stacks ya estamos hablando de cerca de 500 MB, sin contar el tiempo que toma inicializarlos todos.
+- Con 500 hilos repartiéndose unas 80,000 listas, a cada uno le tocan apenas unas 160. El sistema operativo termina gastando más tiempo cambiando de un hilo a otro que realmente procesando algo.
+- Entre más hilos, más pelea por la caché (L1, L2, L3), lo que genera ese fenómeno de cache thrashing que hace todo más lento.
+- En algún punto la curva se invierte: agregar más hilos ya no ayuda, empeora el tiempo.
+
+Ahora bien, algo curioso pasó en nuestro experimento: el speedup siguió subiendo hasta los 100 hilos, llegando a 109.67×. Esto no contradice a Amdahl, lo que pasa es que el problema no es puramente de cómputo (CPU-bound). La fachada `HostBlacklistsDataSourceFacade` simula una latencia cada vez que se hace una consulta (`isInBlackListServer`), entonces los hilos se la pasan bastante tiempo esperando — eso es más comportamiento de un problema I/O-bound. Cuando pasa eso, tener más hilos ayuda porque mientras unos esperan, otros pueden seguir trabajando, y el speedup puede terminar siendo mayor incluso que el número de núcleos que tenemos físicamente.
+
+Con 200 hilos probablemente la mejora ya se empieza a sentir más chiquita comparada con el salto de 50 a 100 (el speedup marginal baja). Y con 500, el overhead de crear tantos hilos y el context switching ya empiezan a pesar más que cualquier beneficio, así que el tiempo termina siendo peor que con 100 o 200.
+
+
+> 2. ¿Cómo se compara usar tantos hilos como núcleos frente a usar el doble?
+
+Con 8 núcleos, esto fue lo que encontramos:
+
+| Configuración | Tiempo (ms) | Speedup |
+|--------------|------------|---------|
+| 8 hilos (N)   | 14,333     | 8.93×   |
+| 16 hilos (2N) | 7,610      | 16.82×  |
+
+Duplicar los hilos casi partió el tiempo a la mitad, lo que da un speedup adicional de casi el doble. Esto llama la atención porque en un problema puramente de cómputo no debería pasar así — si no hay más núcleos disponibles, agregar más hilos de los que hay núcleos normalmente no debería traer mucha ganancia. Pero como la fachada simula latencia, los 16 hilos logran aprovechar esos tiempos muertos de espera mucho mejor que 8.
+
+La conclusión aquí es que el speedup depende muchísimo del tipo de problema que se tiene enfrente. Si hay latencia de por medio (red, I/O, algún sleep simulado), duplicar los hilos puede dar ganancias bien importantes aunque no se dupliquen los núcleos físicos.
+
+
+> 3. ¿Se aplicaría mejor Amdahl usando 1 hilo por máquina en 100 máquinas? ¿Y usando c hilos en 100/c máquinas?
+**100 máquinas, 1 hilo cada una:** sí, aquí Amdahl se cumpliría de forma mucho más limpia, porque:
+
+- Cada máquina tiene su propia CPU, su propia memoria y su propia caché, así que no hay ese problema de recursos compartidos peleándose entre sí.
+- Tampoco existe el overhead de context switching que sí se da cuando varios hilos comparten una misma máquina.
+- El speedup se acercaría bastante al ideal teórico, limitado casi únicamente por la parte secuencial del algoritmo (P) y por la latencia de red necesaria para repartir el trabajo y juntar los resultados al final.
+- Como consultar las listas negras es una tarea que se paraleliza casi al 100%, con 100 máquinas el speedup teórico se acercaría bastante a 100×.
+
+**c hilos en 100/c máquinas:** también mejoraría bastante respecto a tenerlo todo en una sola máquina. Las ventajas son parecidas:
+
+- Ya no hay tanta pelea por CPU y caché entre máquinas distintas, porque cada una solo maneja sus propios c hilos.
+- Los hilos de una máquina no interfieren con los de otra.
+- Lo único nuevo que aparece es la latencia de red para repartir el trabajo y consolidar resultados. Esto es un factor secuencial extra que Amdahl no contempla directamente, pero en la práctica suele ser bastante pequeño comparado con lo que se gana al eliminar el context switching masivo.
+
+En resumen: repartir el trabajo entre varias máquinas escala mejor que meter un montón de hilos en una sola, porque se elimina el cuello de botella del context switching y la pelea por recursos compartidos, a cambio de una latencia de red que normalmente es menor comparada con el beneficio que se obtiene.
+
+
+## Referencias
+
+- Amdahl, G. M. (1967). Validity of the single-processor approach to achieving large scale computing capabilities. *AFIPS Conference Proceedings, 30*, 483–485. https://doi.org/10.1145/1465482.1465560
+
+- Goetz, B., Peierls, T., Bloch, J., Bowbeer, J., Holmes, D., & Lea, D. (2006). *Java concurrency in practice*. Addison-Wesley.
+
+
+---
